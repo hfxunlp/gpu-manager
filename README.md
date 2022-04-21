@@ -8,11 +8,11 @@
 
 以将代码放在`/opt/gpu-manager`为例，推荐通过conda环境管理。
 
-创建conda环境，已环境名`gpuman`，python 3.10为例，`conda create -n gpuman python=3.10`。
+创建conda环境，已环境名`gpuman`，python 3.10为例：`conda create -n gpuman python=3.10`。
 
 激活conda环境：`conda activate gpuman`。
 
-安装`requirements.txt`中的依赖包，通过conda或pip均可（有些包只支持pip），`pip install -r requirements.txt`。
+安装`requirements.txt`中的依赖包，通过conda或pip均可（有些包只支持pip）：`pip install -r requirements.txt`。
 
 将创建conda环境用户home目录的.bashrc中初始化conda环境的代码块提取出来，作为`init_conda.sh`，`scripts/init_conda.sh`为例。
 
@@ -112,7 +112,7 @@ wait_task_cmd = lambda pids: "bash %s/wait_pid.sh %s" % (wait_task_wkd, " ".join
 wait_task_desc = lambda gpuid: "等待GPU %d任务" % (gpuid,)
 ```
 
-激活conda环境后，启动服务：`python server.py`(如配置为systemd的服务，可通过`sudo systemctl start gpuman.service`启动)。
+激活conda环境后，启动服务：`python server.py`(如配置为systemd的服务，可通过：`sudo systemctl start gpuman.service`启动)。
 
 访问`http://服务器IP:端口/admin`进入管理页面，输入超级密码，执行`useradd 用户名 密码`命令，创建第一个用户，再执行`suadd 用户名`命令，将该用户设为管理员。然后即可访问`http://服务器IP:端口`登录使用。
 
@@ -202,7 +202,7 @@ Python 3.10.4，Intel Core M3-7Y30 CPU，视不同的请求类型，每秒可处
 
 任务的工作路径应使用绝对路径，执行任务前会自动切换到任务配置的工作路径，所以任务脚本中不需要再通过`cd`命令切换到配置的工作路径。
 
-用户权限一般大于0，默认为1，越大权限越高，当用户权限为`k`的用户使用`j`块GPU时，调度程序认为用户使用`j/k`块GPU。`0`具有比正值更高的权限，负值具有最高权限，当优先级为负值的用户有等待执行的任务时，一般不会启动其他用户的任务。
+用户优先级一般大于0，默认为1，越大优先级越高，当优先级为`k`的用户使用`j`块GPU时，调度程序认为用户使用`j/k`块GPU。`0`具有比正值更高的优先级，负值具有最高优先级，当优先级为负值的用户有等待执行的任务时，一般不会启动其他用户的任务。
 
 `cnfg.py`中的`hash_wd`涉及用户密码哈希的计算，修改会导致所有用户密码哈希值的改变，并导致认证/登录失败。此文件一定要只有管理员/root可读写(建议权限700)，避免泄漏超级密码。
 
