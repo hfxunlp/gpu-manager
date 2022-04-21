@@ -17,7 +17,7 @@ from subprocess import run, DEVNULL, STDOUT
 import pickle
 from utils.base import get_exp_p
 from utils.custom_hash import hash_func
-from utils.cache import Cache, clear_usrtask_cache, clear_status_cache, clear_userinfo_cache, clear_add_admin_usrtask_cache, clear_createid_cache, clear_usrcreate_cache
+from utils.cache import Cache, clear_usrtask_cache, clear_status_cache, clear_userinfo_cache, clear_add_admin_usrtask_cache, clear_createid_cache, clear_usrcreate_cache, clear_usr_cache
 from utils.mail import send_mail_task_bg
 from utils.nvsm import get_gpu_pids
 from utils.prcs.base import is_alive, join
@@ -562,6 +562,7 @@ class Manager(DictSerial):
 				if usr in self.admin_users:
 					self.admin_users.remove(usr)
 		clear_userinfo_cache(self.cache)
+		clear_usr_cache(self.cache, usrs=usrs)
 
 	def add_admin(self, *usrs):
 
