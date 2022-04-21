@@ -258,6 +258,13 @@ def clear_createid_cache(cm, task_id):
 
 	cm.clear_func_wgz(lambda x: isinstance(x, tuple) and len(x) == 3 and x[0] == "/create" and x[-1] == task_id)
 
+def clear_usrcreate_cache(cm, usrs=None):
+
+	if usrs is None:
+		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and (x[0] == "/create"))
+	else:
+		cm.clear_wgz(*[("/create", _,) for _ in usrs])
+
 def clear_all_temp_cache(cm):
 
 	cm.clear_all_temp()

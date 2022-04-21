@@ -2,8 +2,10 @@
 
 set -e -o pipefail -x
 
-source /opt/gpu-manager/init_conda.sh
+export wkpath=/opt/gpu-manager
+
+source $wkpath/init_conda.sh
 
 conda activate gpuman
 
-python /opt/gpu-manager/tools/wait/PID.py $@
+python $wkpath/tools/wait/PID.py $@

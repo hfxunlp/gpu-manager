@@ -17,7 +17,7 @@ from subprocess import run, DEVNULL, STDOUT
 import pickle
 from utils.base import get_exp_p
 from utils.custom_hash import hash_func
-from utils.cache import Cache, clear_usrtask_cache, clear_status_cache, clear_userinfo_cache, clear_add_admin_usrtask_cache, clear_createid_cache
+from utils.cache import Cache, clear_usrtask_cache, clear_status_cache, clear_userinfo_cache, clear_add_admin_usrtask_cache, clear_createid_cache, clear_usrcreate_cache
 from utils.mail import send_mail_task_bg
 from utils.nvsm import get_gpu_pids
 from utils.prcs.base import is_alive, join
@@ -533,13 +533,17 @@ class Manager(DictSerial):
 				else:
 					_new_priority = _usr_priority
 				self.users[usr].load_state_dict(update_state_dict(self.users[usr].state_dict(), User(usr=usr, passwd=passwd, serv_usr=serv_usr, serv_passwd=serv_passwd, priority=_new_priority, default_task=default_task).state_dict()))
+				_clean_usrcreate_cache = True
 			else:
 				_passwd = passwd if passwd else usr
 				self.users[usr] = User(usr=usr, passwd=_passwd, serv_usr=serv_usr if serv_usr else usr, serv_passwd=serv_passwd if serv_passwd else _passwd, priority=float(priority) if priority else None, default_task=default_task)
+				_clean_usrcreate_cache = False
 		clear_userinfo_cache(self.cache)
 		if _reschedule:
 			self.reschedule()
 			clear_status_cache(self.cache)
+		if _clean_usrcreate_cache:
+			clear_usrcreate_cache(self.cache, usrs=[usr])
 
 	def add_users(self, *usrs):
 
