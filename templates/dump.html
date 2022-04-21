@@ -1,0 +1,20 @@
+<html>
+<head>
+<title>转储</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px">
+<a href="/">主页</a>
+<a href="/query">查询</a>
+</p>
+<form action="/dump" method="post">
+<legend style="font-size:30px">数量:</legend>
+<p><input type="text" style="font-size:30px" name="cmd" value="{{ cmd }}" /></p>
+<p><button type="submit" style="font-size:30px">执行</button></p>
+</form>
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}</div>
+</body>
+</html>

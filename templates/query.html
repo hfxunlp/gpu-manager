@@ -1,0 +1,35 @@
+<html>
+<head>
+{% if refresh_time %}
+<meta http-equiv="refresh" content="{{ refresh_time }}">
+{% endif %}
+<title>查询</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px">
+<a href="/">主页</a>
+<a href="/status">状态</a>
+</p>
+<form action="/query" method="post">
+<legend style="font-size:30px">用户名:</legend>
+<p><input type="text" style="font-size:30px" name="usr" value="{{ usr }}" /></p>
+<p><button type="submit" style="font-size:30px">查询</button></p>
+</form>
+{% if done_tasks %}
+<p>已完成</p>
+<p>{{ done_tasks | safe }}</p>
+{% endif %}
+{% if run_tasks %}
+<p>运行中</p>
+<p>{{ run_tasks | safe }}</p>
+{% endif %}
+{% if wait_tasks %}
+<p>等待中</p>
+<p>{{ wait_tasks | safe }}</p>
+{% endif %}
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}</div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<html>
+<head>
+<title>GPU Manager</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px"><a href="/create">创建</a></p>
+<p style="font-size:30px"><a href="/update">更新</a></p>
+<p style="font-size:30px"><a href="/query">查询</a></p>
+<p style="font-size:30px"><a href="/cancel">取消</a></p>
+<p style="font-size:30px"><a href="/setting">设置</a></p>
+<p style="font-size:30px"><a href="/status">状态</a></p>
+<p style="font-size:30px"><a href="/dump">转储</a></p>
+<p style="font-size:30px"><a href="/userinfo">用户列表</a></p>
+{% if is_admin %}
+<p style="font-size:30px"><a href="/admin">管理</a></p>
+{% endif %}
+<p style="font-size:30px"><a href="/logout">注销</a></p>
+</div>
+</body>
+</html>

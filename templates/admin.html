@@ -1,0 +1,25 @@
+<html>
+<head>
+<title>管理</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px">
+<a href="/">主页</a>
+<a href="/userinfo">用户</a>
+<a href="/status">状态</a>
+</p>
+<form action="/admin" method="post">
+<legend style="font-size:30px">执行命令:</legend>
+<p><input type="text" style="font-size:30px" name="cmd" value="{{ cmd }}" /></p>
+{% if show_passwd %}
+<legend style="font-size:30px">密码:</legend>
+<p><input type="password" style="font-size:30px" name="passwd" value="{{ passwd }}" /></p>
+{% endif %}
+<p><button type="submit" style="font-size:30px">执行</button></p>
+</form>
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}</div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+[Unit]
+Description=GPU Manager
+After=network.target
+
+[Service]
+ExecStart=/bin/bash /opt/gpu-manager/start_gpuman.sh
+
+[Install]
+WantedBy=default.target

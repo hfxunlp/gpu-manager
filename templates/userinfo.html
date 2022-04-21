@@ -1,0 +1,20 @@
+<html>
+<head>
+<title>用户列表</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px"><a href="/">主页</a></p>
+{% if usrs %}
+<p>用户:</p>
+<p>{{ usrs | safe }}</p>
+{% endif %}
+{% if admins %}
+<p>管理员:</p>
+<p>{{ admins | safe }}</p>
+{% endif %}
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}</div>
+</body>
+</html>

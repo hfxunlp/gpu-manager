@@ -1,0 +1,22 @@
+<html>
+<head>
+<title>取消任务</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px">
+<a href="/">主页</a>
+<a href="/query">查询</a>
+</p>
+<p>不要取消其他用户的任务</p>
+<form action="/cancel" method="post">
+<legend style="font-size:30px">任务ID:</legend>
+<p><input type="text" style="font-size:30px" name="tid" value="{{ tid }}" /></p>
+<p><button type="submit" style="font-size:30px">取消</button></p>
+</form>
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}
+</div>
+</body>
+</html>

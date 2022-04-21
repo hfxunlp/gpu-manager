@@ -1,0 +1,27 @@
+<html>
+<head>
+{% if refresh_time %}
+<meta http-equiv="refresh" content="{{ refresh_time }}">
+{% endif %}
+<title>状态</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px"><a href="/">主页</a></p>
+{% if done_tasks %}
+<p>已完成</p>
+<p>{{ done_tasks | safe }}</p>
+{% endif %}
+{% if run_tasks %}
+<p>运行中</p>
+<p>{{ run_tasks | safe }}</p>
+{% endif %}
+{% if wait_tasks %}
+<p>等待中</p>
+<p>{{ wait_tasks | safe }}</p>
+{% endif %}
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}</div>
+</body>
+</html>

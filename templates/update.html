@@ -1,0 +1,41 @@
+<html>
+<head>
+<title>更新任务</title>
+</head>
+<body>
+<div align="center">
+<p style="font-size:30px">
+<a href="/">主页</a>
+<a href="/query">查询</a>
+</p>
+<form action="/update" method="post">
+<legend style="font-size:30px">任务ID:</legend>
+<p><input type="text" style="font-size:30px" name="tid" value="{{ tid }}" /></p>
+<legend style="font-size:30px">工作路径:</legend>
+<p><input type="text" style="font-size:30px" name="wkd" value="{{ wkd }}" /></p>
+<legend style="font-size:30px">执行命令:</legend>
+<p><input type="text" style="font-size:30px" name="cmd" value="{{ cmd }}" /></p>
+<legend style="font-size:30px">标准输出文件 (/dev/null不保存):</legend>
+<p><input type="text" style="font-size:30px" name="stdout" value="{{ stdout }}" /></p>
+<legend style="font-size:30px">标准错误文件 (/dev/null不保存):</legend>
+<p><input type="text" style="font-size:30px" name="stderr" value="{{ stderr }}" /></p>
+<legend style="font-size:30px">显卡数量:</legend>
+<p><input type="text" style="font-size:30px" name="ngpu" value="{{ ngpu }}" /></p>
+<legend style="font-size:30px">显卡ID (None不做限制):</legend>
+<p><input type="text" style="font-size:30px" name="force_gpuids" value="{{ force_gpuids }}" /></p>
+<legend style="font-size:30px">传递设备ID (None不传):</legend>
+<p><input type="text" style="font-size:30px" name="real_gpuid_args" value="{{ real_gpuid_args }}" /></p>
+<legend style="font-size:30px">运行时长 (None不做限制):</legend>
+<p><input type="text" style="font-size:30px" name="timeout" value="{{ timeout }}" /></p>
+<legend style="font-size:30px">通知邮件:</legend>
+<p><input type="text" style="font-size:30px" name="email" value="{{ email }}" /></p>
+<legend style="font-size:30px">任务描述:</legend>
+<p><textarea rows="3" cols="50" type="text" style="font-size:30px" name="desc">{{ desc }}</textarea></p>
+<p><button type="submit" style="font-size:30px">提交</button></p>
+</form>
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}
+</div>
+</body>
+</html>

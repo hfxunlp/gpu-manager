@@ -1,0 +1,18 @@
+<html>
+<head>
+<title>登录</title>
+</head>
+<body>
+<div align="center">
+<form action="/login{% if redirect_url %}?redirect_url={{ redirect_url | safe }}{% endif %}" method="post">
+<legend style="font-size:30px">用户名:</legend>
+<p><input type="text" style="font-size:30px" name="usr" value="{{ usr }}" /></p>
+<legend style="font-size:30px">密码:</legend>
+<p><input type="password" style="font-size:30px" name="passwd" value="{{ passwd }}" /></p>
+<p><button type="submit" style="font-size:30px">登录</button></p>
+</form>
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}</div>
+</body>
+</html>
