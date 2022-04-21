@@ -33,8 +33,8 @@ serial_func_txt, deserial_func_txt = repr, eval
 
 io_dict = {DEVNULL: DEVNULL, "/dev/null": DEVNULL, "devnull": DEVNULL, STDOUT: STDOUT, "stdout": STDOUT}
 
-_statef_permit = S_IRUSR | S_IWUSR
-_done_taskf_permit = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
+_statef_permission = S_IRUSR | S_IWUSR
+_done_taskf_permission = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
 def get_usr_ids(usr):
 
@@ -903,7 +903,7 @@ class Manager(DictSerial):
 			self.save_ind = (self.save_ind + 1) % self.save_max
 			_statef = "%s.%d" % (self.statef, self.save_ind,)
 		cust_run(["touch", _statef], shell=False, cwd=None, timeout=None, env=None)
-		chmod(_statef, _statef_permit)
+		chmod(_statef, _statef_permission)
 		if self.statef is not None:
 			_p = save_object(_statef, self.get_saving_dict() if dict_to_save is None else dict_to_save, ser_x=ser_x)
 			with self.process_pool_lck:
@@ -1028,7 +1028,7 @@ class Manager(DictSerial):
 				for t in tl:
 					fwrt.write(serial_func_txt(t.state_dict()).encode("utf-8"))
 					fwrt.write(ens)
-			chmod(self.done_taskf, _done_taskf_permit)
+			chmod(self.done_taskf, _done_taskf_permission)
 
 	def dump_done_tasks_portion(self, p=None):
 

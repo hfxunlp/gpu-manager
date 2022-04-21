@@ -3,6 +3,8 @@
 from manager import Task, Manager, in_root_mode
 from time import sleep
 from threading import Thread
+from os import chmod
+from stat import S_IRUSR, S_IWUSR, S_IXUSR
 from gzip import compress
 from flask import Flask, request, render_template, send_from_directory, session, redirect, url_for
 from json import loads, dumps
@@ -15,6 +17,8 @@ from utils.fmt.base import task_info, extract_create_dict, extract_update_dict, 
 from utils.fmt.html import build_html_task_table, build_user_table
 
 from cnfg import use_port, use_gpus, admin_passwd, sleep_secs, flask_compress_level, save_every, session_life_time, refresh_time, state_file, done_task_file, auto_dump_p, auto_dump_thres, cache_life_short, cache_life_medium, cache_life_long, cache_clean_time, round_tid, secret_key_length, hash_wd, default_task
+
+_cnfg_permission = S_IRUSR | S_IWUSR | S_IXUSR
 
 def wait_exit_core(force=False, wtime=5.0, exit_code=0):
 
@@ -978,6 +982,10 @@ manager = Manager(gpu_ids=use_gpus, sleep_secs=sleep_secs, statef=state_file, do
 cache = manager.cache
 
 if __name__ == "__main__":
+	try:
+		chmod("cnfg.py", _cnfg_permission)
+	except:
+		pass
 	manager.start()
 	if ("enable_super_passwd" not in manager.ctx) or (len(manager.admin_users) == 0):
 		manager.ctx["enable_super_passwd"] = True
