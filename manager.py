@@ -1439,9 +1439,11 @@ class Manager(DictSerial):
 						_rt = True
 					else:
 						_rt = False
-			if _rt:
-				clear_createid_cache(self.cache, task.tid)
-				clear_usrtask_cache(self.cache, usrs=[usr])
+			if _rt is not None:
+				if _rt:
+					clear_createid_cache(self.cache, task.tid)
+					clear_usrtask_cache(self.cache, usrs=[usr])
+				return _rt
 		return False
 
 	def cancel_task(self, taskid, usr):
