@@ -16,6 +16,9 @@
 <p style="font-size:30px"><a href="/admin">管理</a></p>
 {% endif %}
 <p style="font-size:30px"><a href="/logout">注销</a></p>
+{% if prompt %}
+<p>{{ prompt }}</p>
+{% endif %}
 </div>
 </body>
 </html>

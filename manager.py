@@ -17,13 +17,13 @@ from subprocess import run, DEVNULL, STDOUT
 import pickle
 from utils.base import get_exp_p
 from utils.custom_hash import hash_func
-from utils.cache import Cache, clear_usrtask_cache, clear_status_cache, clear_userinfo_cache, clear_add_admin_usrtask_cache, clear_createid_cache, clear_usrcreate_cache, clear_usr_cache
+from utils.cache.cust import Cache
 from utils.mail import send_mail_task_bg
 from utils.nvsm import get_gpu_pids
 from utils.prcs.base import is_alive, join
 from utils.prcs.ext import kill_ptree
 
-from cnfg import admin_passwd, default_task, max_caches, cache_drop_p, wait_task_cmd, wait_task_wkd, wait_task_desc, root_mode, aggressive_clean, smtp_host, smtp_port, smtp_user, smtp_passwd, smtp_subject
+from cnfg import admin_passwd, default_task, digest_size, max_caches, cache_drop_p, wait_task_cmd, wait_task_wkd, wait_task_desc, root_mode, aggressive_clean, smtp_host, smtp_port, smtp_user, smtp_passwd, smtp_subject
 
 uid, gid = getuid(), getgid()
 in_root_mode = (uid == 0) and root_mode
@@ -118,6 +118,19 @@ def update_return_code(old, new):
 
 	return old if new == 0 else new
 
+def priority_gt(a, b):
+
+	if a <= 0.0:
+		if b <= 0.0:
+			return a < b
+		else:
+			return True
+	else:
+		if b <= 0.0:
+			return False
+		else:
+			return a > b
+
 def cust_run(exec_cmd, stdout=DEVNULL, stderr=DEVNULL, shell=True, cwd=None, timeout=None, env=None):
 
 	return run(exec_cmd, stdin=None, stdout=stdout, stderr=stderr, capture_output=False, shell=shell, cwd=cwd, timeout=timeout, check=False, encoding=None, errors=None, text=None, env=env, universal_newlines=None)
@@ -134,7 +147,7 @@ def start_task_core(task, usr, passwd):
 	_rt_code = None
 	_cuda_devices_str = ",".join([str(gpuid) for gpuid in task.gpuids])
 	_exec_cmd = task.cmd if task.real_gpuid_args is None else "%s %s%s" % (task.cmd, task.real_gpuid_args, _cuda_devices_str,)
-	_env={"CUDA_VISIBLE_DEVICES": _cuda_devices_str}
+	_env={"CUDA_VISIBLE_DEVICES": _cuda_devices_str, "NVIDIA_VISIBLE_DEVICES": _cuda_devices_str}
 	_stdout, _stderr = io_dict.get(task.stdout.lower(), task.stdout), io_dict.get(task.stderr.lower(), task.stderr)
 	if not _stdout:
 		_stdout = DEVNULL
@@ -393,7 +406,9 @@ class User(DictSerial):
 
 	def verify(self, passwd):
 
-		return self.passwd == hash_func(passwd, usr=self.usr)
+		_ = self.passwd
+
+		return (len(_) == digest_size) and (_ == hash_func(passwd, usr=self.usr))
 
 	def is_unsafe(self):
 
@@ -402,6 +417,18 @@ class User(DictSerial):
 	def is_safe(self):
 
 		return self.passwd != hash_func(self.usr, usr=self.usr)
+
+	def lock(self):
+
+		if len(self.passwd) == digest_size:
+			self.passwd = b"#" + self.passwd
+
+	def unlock(self):
+
+		_ = self.passwd
+		_delta = len(_) - digest_size
+		if _delta > 0:
+			self.passwd = _[_delta:]
 
 class UserDict(OrderedDict):
 
@@ -538,12 +565,12 @@ class Manager(DictSerial):
 				_passwd = passwd if passwd else usr
 				self.users[usr] = User(usr=usr, passwd=_passwd, serv_usr=serv_usr if serv_usr else usr, serv_passwd=serv_passwd if serv_passwd else _passwd, priority=float(priority) if priority else None, default_task=default_task)
 				_clean_usrcreate_cache = False
-		clear_userinfo_cache(self.cache)
+		self.cache.clear_userinfo_cache()
 		if _reschedule:
 			self.reschedule()
-			clear_status_cache(self.cache)
+			self.cache.clear_status_cache()
 		if _clean_usrcreate_cache:
-			clear_usrcreate_cache(self.cache, usrs=[usr])
+			self.cache.clear_usrcreate_cache(usrs=[usr])
 
 	def add_users(self, *usrs):
 
@@ -551,18 +578,21 @@ class Manager(DictSerial):
 			for usr in usrs:
 				if usr not in self.users:
 					self.users[usr] = User(usr=usr, passwd=usr, serv_usr=usr, serv_passwd="", priority=None, default_task=default_task)
-		clear_userinfo_cache(self.cache)
+		self.cache.clear_userinfo_cache()
 
 	def del_user(self, *usrs):
 
+		_d_usrs = set()
 		with self.gil, self.user_lck, self.admin_lck:
 			for usr in usrs:
 				if usr in self.users:
 					del self.users[usr]
+					if usr not in _d_usrs:
+						_d_usrs.add(usr)
 				if usr in self.admin_users:
 					self.admin_users.remove(usr)
-		clear_userinfo_cache(self.cache)
-		clear_usr_cache(self.cache, usrs=usrs)
+		if _d_usrs:
+			self.clear_usr_tasks(_d_usrs)
 
 	def add_admin(self, *usrs):
 
@@ -573,8 +603,8 @@ class Manager(DictSerial):
 					self.admin_users.add(usr)
 					_modified.append(usr)
 		if _modified:
-			clear_userinfo_cache(self.cache)
-			clear_add_admin_usrtask_cache(self.cache, _modified)
+			self.cache.clear_userinfo_cache()
+			self.cache.clear_add_admin_usrtask_cache(_modified)
 
 	def del_admin(self, *usrs):
 
@@ -582,7 +612,84 @@ class Manager(DictSerial):
 			for usr in usrs:
 				if usr in self.admin_users:
 					self.admin_users.remove(usr)
-		clear_userinfo_cache(self.cache)
+		self.cache.clear_userinfo_cache()
+
+	def lock_user(self, *usrs):
+
+		with self.user_lck:
+			for usr in usrs:
+				if usr in self.users:
+					self.users[usr].lock()
+
+	def unlock_user(self, *usrs):
+
+		with self.user_lck:
+			for usr in usrs:
+				if usr in self.users:
+					self.users[usr].unlock()
+
+	def clear_usr_tasks(self, usrs):
+
+		_dtl = []
+		with self.wait_tasks_lck:
+			if self.wait_tasks:
+				if self.is_balance_scheduler_nolck():
+					for _usr in usrs:
+						if _usr in self.wait_tasks:
+							_dtl.extend(self.wait_tasks[_usr])
+							del self.wait_tasks[_usr]
+				else:
+					_del_ind = []
+					for _, _t in enumerate(self.wait_tasks):
+						if _t.usr in usrs:
+							_dtl.append(_t)
+							_del_ind.append(_)
+					if _del_ind:
+						for _ in reversed(_del_ind):
+							del self.wait_tasks[_]
+		with self.next_task_lck:
+			if (self.next_task is not None) and (self.next_task.usr in usrs):
+				_dtl.insert(0, self.next_task)
+				self.next_task = None
+		ter_tasks = []
+		tpl = []
+		with self.run_task_lck:
+			if self.run_tasks:
+				for _, (p, cur_task,) in self.run_tasks.items():
+					if cur_task.usr in usrs:
+						tpl.append(p)
+						ter_tasks.append(cur_task)
+			if tpl:
+				for p in tpl:
+					kill_ptree(p)
+			if ter_tasks:
+				for cur_task in ter_tasks:
+					del self.run_tasks[cur_task.tid]
+		if ter_tasks:
+			_rgpu = []
+			for cur_task in ter_tasks:
+				_rgpu.extend(cur_task.gpuids)
+			if _rgpu:
+				self.release_gpus(_rgpu)
+			if _dtl:
+				ter_tasks.extend(_dtl)
+			_dtl = ter_tasks
+		if _dtl:
+			_etime = time()
+			for _ in _dtl:
+				_.etime = _etime
+				_.status = "cancelled"
+			self.add_done_task(*_dtl)
+		self.cache.clear_userinfo_cache()
+		self.cache.clear_usr_cache(usrs=usrs)
+
+	def get_usr_priority(self, usr):
+
+		with self.user_lck:
+			if usr in self.users:
+				return self.users[usr].priority
+
+		return None
 
 	def lock(self, *locks):
 
@@ -630,7 +737,7 @@ class Manager(DictSerial):
 				self.wait_tasks = _rs
 				_clear_cache = True
 		if _clear_cache:
-			clear_usrtask_cache(self.cache, usrs=None)
+			self.cache.clear_usrtask_cache(usrs=None)
 
 	def get_usr_gpus(self):
 
@@ -1064,7 +1171,7 @@ class Manager(DictSerial):
 
 		if _dump_l:
 			self.write_done_tasks([_dump_l[_k] for _k in _del_ind])
-			clear_usrtask_cache(self.cache, usrs=_clear_cache_usrs)
+			self.cache.clear_usrtask_cache(usrs=_clear_cache_usrs)
 
 	def dump_done_tasks(self, k=None):
 
@@ -1079,7 +1186,7 @@ class Manager(DictSerial):
 
 		if done_tasks:
 			self.write_done_tasks(done_tasks)
-			clear_usrtask_cache(self.cache, usrs=get_tasks_usrs(done_tasks))
+			self.cache.clear_usrtask_cache(usrs=get_tasks_usrs(done_tasks))
 
 	def dump_done_tasks_tid(self, *tids):
 
@@ -1098,7 +1205,7 @@ class Manager(DictSerial):
 
 			if _dump_l:
 				self.write_done_tasks(_dump_l)
-				clear_usrtask_cache(self.cache, usrs=get_tasks_usrs(_dump_l))
+				self.cache.clear_usrtask_cache(usrs=get_tasks_usrs(_dump_l))
 
 	def dump_usr_done_tasks(self, usr, k=None):
 
@@ -1129,7 +1236,7 @@ class Manager(DictSerial):
 
 		if _dump_l:
 			self.write_done_tasks(_dump_l)
-			clear_usrtask_cache(self.cache, usrs=[usr])
+			self.cache.clear_usrtask_cache(usrs=[usr])
 
 	def dump_usr_done_tasks_tid(self, usr, *tids):
 
@@ -1148,7 +1255,7 @@ class Manager(DictSerial):
 
 			if _dump_l:
 				self.write_done_tasks(_dump_l)
-				clear_usrtask_cache(self.cache, usrs=[usr])
+				self.cache.clear_usrtask_cache(usrs=[usr])
 
 	def add_task(self, *tasks):
 
@@ -1163,6 +1270,7 @@ class Manager(DictSerial):
 					with self.next_task_lck:
 						if self.next_task is not None:
 							_next_task_usr = self.next_task.usr
+					_next_task_priority = None if _next_task_usr is None else self.get_usr_priority(_next_task_usr)
 					_consider_reschedule = (_next_task_usr is not None) and (_next_task_usr in _usr_gpus)
 					for _task in _add_tasks:
 						_usr = _task.usr
@@ -1170,6 +1278,10 @@ class Manager(DictSerial):
 							self.wait_tasks[_usr] = TaskList()
 							if _consider_reschedule and (not _reschedule) and (_usr != _next_task_usr):
 								_reschedule = True
+							else:
+								_usr_priority = self.get_usr_priority(_usr)
+								if (_usr_priority is not None) and ((_next_task_priority is None) or priority_gt(_usr_priority, _next_task_priority)):
+									_reschedule = True
 						self.wait_tasks[_usr].append(_task)
 						if _usr not in _clear_cache_usrs:
 							_clear_cache_usrs.add(_usr)
@@ -1178,7 +1290,7 @@ class Manager(DictSerial):
 							self.reschedule_nolck()
 				else:
 					self.wait_tasks.extend(_add_tasks)
-			clear_usrtask_cache(self.cache, usrs=_clear_cache_usrs)
+			self.cache.clear_usrtask_cache(usrs=_clear_cache_usrs)
 
 	def gpus_available(self, task):
 
@@ -1429,8 +1541,8 @@ class Manager(DictSerial):
 					with self.gil, self.wait_tasks_lck:
 						if self.is_balance_scheduler_nolck():
 							self.reschedule_nolck()
-					clear_createid_cache(self.cache, task.tid)
-					clear_usrtask_cache(self.cache, usrs=[usr])
+					self.cache.clear_createid_cache(task.tid)
+					self.cache.clear_usrtask_cache(usrs=[usr])
 				return _rt
 			for wtask in self.iter_wait_tasks():
 				if wtask.tid == task.tid:
@@ -1441,8 +1553,8 @@ class Manager(DictSerial):
 						_rt = False
 			if _rt is not None:
 				if _rt:
-					clear_createid_cache(self.cache, task.tid)
-					clear_usrtask_cache(self.cache, usrs=[usr])
+					self.cache.clear_createid_cache(task.tid)
+					self.cache.clear_usrtask_cache(usrs=[usr])
 				return _rt
 		return False
 
@@ -1463,7 +1575,7 @@ class Manager(DictSerial):
 				_done_task.etime = time()
 				_done_task.status = "cancelled"
 				self.add_done_task(_done_task)
-				clear_usrtask_cache(self.cache, usrs=[_done_task.usr])
+				self.cache.clear_usrtask_cache(usrs=[_done_task.usr])
 			return _rt
 		with self.wait_tasks_lck:
 			for i, wtask in self.enum_iter_wait_tasks_nolck():
@@ -1481,7 +1593,7 @@ class Manager(DictSerial):
 				_done_task.etime = time()
 				_done_task.status = "cancelled"
 				self.add_done_task(_done_task)
-				clear_usrtask_cache(self.cache, usrs=[_done_task.usr])
+				self.cache.clear_usrtask_cache(usrs=[_done_task.usr])
 			return _rt
 		cancel_p = None
 		_rt = False
@@ -1504,7 +1616,7 @@ class Manager(DictSerial):
 			_done_task.status = "cancelled"
 			self.release_gpus(_done_task.gpuids)
 			self.add_done_task(_done_task)
-			clear_usrtask_cache(self.cache, usrs=[_done_task.usr])
+			self.cache.clear_usrtask_cache(usrs=[_done_task.usr])
 			if smtp_user and _done_task.email:
 				self.send_mail(_done_task, note="任务已取消")
 		if _update_state_file:
@@ -1549,7 +1661,7 @@ class Manager(DictSerial):
 							self.next_task = _task
 					else:
 						self.wait_tasks.insert(newid - 1, _task)
-		clear_usrtask_cache(self.cache, usrs=[_usr])
+		self.cache.clear_usrtask_cache(usrs=[_usr])
 		return True
 
 	def start_task(self, task, usr, passwd):
@@ -1631,7 +1743,7 @@ class Manager(DictSerial):
 					if _sleep_tag:
 						sleep(self.sleep_secs)
 					elif _clean_usrs_cache:
-						clear_usrtask_cache(self.cache, usrs=_clean_usrs_cache)
+						self.cache.clear_usrtask_cache(usrs=_clean_usrs_cache)
 				if self.run_new():
 					_clear_cache_usr = None
 					with self.gil, self.next_task_lck:
@@ -1639,7 +1751,7 @@ class Manager(DictSerial):
 							_clear_cache_usr = self.next_task.usr
 							self.next_task = None
 					if _clear_cache_usr is not None:
-						clear_usrtask_cache(self.cache, usrs=[_clear_cache_usr])
+						self.cache.clear_usrtask_cache(usrs=[_clear_cache_usr])
 				else:
 					with self.gil, self.wait_tasks_lck, self.next_task_lck:
 						if self.next_task is not None:
@@ -1690,9 +1802,9 @@ class Manager(DictSerial):
 					if _dtl:
 						self.add_done_task(*_dtl)
 					if _clean_usrs_cache:
-						clear_usrtask_cache(self.cache, usrs=_clean_usrs_cache)
+						self.cache.clear_usrtask_cache(usrs=_clean_usrs_cache)
 					else:
-						clear_status_cache(self.cache)
+						self.cache.clear_status_cache()
 				if _update_state_file:
 					with self.gil, self.wait_tasks_lck, self.next_task_lck:
 						if self.wait_tasks or (self.next_task is not None):
@@ -1754,4 +1866,4 @@ class Manager(DictSerial):
 						else:
 							self.wait_tasks.insert(_index_wait_insert, cur_task)
 							_index_wait_insert += 1
-			clear_usrtask_cache(self.cache, usrs=None)
+			self.cache.clear_usrtask_cache(usrs=None)

@@ -20,6 +20,12 @@ from cnfg import use_port, use_gpus, admin_passwd, sleep_secs, flask_compress_le
 
 _cnfg_permission = S_IRUSR | S_IWUSR | S_IXUSR
 
+def get_common_render_kwargs():
+
+	_prompt = ctx.get("prompt", None)
+
+	return {} if _prompt is None else {"prompt": _prompt}
+
 def wait_exit_core(force=False, wtime=5.0, exit_code=0):
 
 	manager.stop(force=force)
@@ -51,7 +57,7 @@ def query_user(usr, qu):
 		tmp = manager.get_wait_tasks_user(usr)
 		if tmp:
 			rsd["wait_tasks"] = build_html_task_table(_is_admin_page, qu, content=tmp)
-		_rs = render_template("query.html", **rsd)
+		_rs = render_template("query.html", **rsd, **get_common_render_kwargs())
 		cache.set(_key, _rs, cache_life_long)
 
 	return _rs
@@ -109,7 +115,7 @@ def index_form():
 		_key = ("/", _is_admin,)
 		_rs = cache.get(_key, None)
 		if _rs is None:
-			_rs = render_template("index.html", is_admin=_is_admin)
+			_rs = render_template("index.html", is_admin=_is_admin, **get_common_render_kwargs())
 			cache.set(_key, _rs, cache_life_long)
 		return _rs
 
@@ -164,9 +170,9 @@ def create_form_post():
 		try:
 			t = Task(tid=manager.get_taskid(), cmd=request.form["cmd"], wkd=request.form["wkd"], stdout=request.form["stdout"], stderr=request.form["stderr"], usr=usr, ngpu=int(request.form["ngpu"]), gpuids=None, force_gpuids=parse_none(request.form["force_gpuids"], func=int_split), real_gpuid_args=parse_none(request.form["real_gpuid_args"]), timeout=parse_none(request.form["timeout"], func=float), email=request.form["email"], desc=request.form["desc"], pid=None, ctime=None, stime=None, etime=None, status=None)
 			manager.add_task(t)
-			return render_template("create.html", ret="创建成功,任务ID %d" % (t.tid,), **request.form)
+			return render_template("create.html", ret="创建成功,任务ID %d" % (t.tid,), **request.form, **get_common_render_kwargs())
 		except Exception as e:
-			return render_template("create.html", ret="创建失败,异常 %s" % (str(e),), **request.form)
+			return render_template("create.html", ret="创建失败,异常 %s" % (str(e),), **request.form, **get_common_render_kwargs())
 
 @app.route("/create", methods=["GET"])
 @app.route("/create/<string:str_taskid>", methods=["GET"])
@@ -190,14 +196,14 @@ def create_form_get(str_taskid=""):
 				_key = ("/create", usr, _task_id,)
 				_rs = cache.get(_key, None)
 				if _rs is None:
-					_rs = render_template("create.html", **extract_create_dict(_task.state_dict(), dedict=manager.users.get(usr, {"default_task": default_task}).get("default_task", default_task)))
+					_rs = render_template("create.html", **extract_create_dict(_task.state_dict(), dedict=manager.users.get(usr, {"default_task": default_task}).get("default_task", default_task)), **get_common_render_kwargs())
 					cache.set(_key, _rs, cache_life_short)
 				return _rs
 
 		_key = ("/create", usr,)
 		_rs = cache.get(_key, None)
 		if _rs is None:
-			_rs = render_template("create.html", **manager.users.get(usr, {"default_task": default_task}).get("default_task", default_task))
+			_rs = render_template("create.html", **manager.users.get(usr, {"default_task": default_task}).get("default_task", default_task), **get_common_render_kwargs())
 			cache.set(_key, _rs, cache_life_long)
 
 		return _rs
@@ -221,12 +227,12 @@ def update_form_get(str_taskid=""):
 		if _task_id is not None:
 			_task = manager.find_task_by_id(_task_id, check_all=False)
 			if (_task is not None) and ((_task.usr == usr) or (usr in manager.admin_users)):
-				return render_template("update.html", **extract_update_dict(_task.state_dict(), dedict=manager.users.get(_task.usr, {"default_task": default_task}).get("default_task", default_task)))
+				return render_template("update.html", **extract_update_dict(_task.state_dict(), dedict=manager.users.get(_task.usr, {"default_task": default_task}).get("default_task", default_task)), **get_common_render_kwargs())
 
 		_key = ("/update", usr,)
 		_rs = cache.get(_key, None)
 		if _rs is None:
-			_rs = render_template("update.html", **manager.users.get(usr, {"default_task": default_task}).get("default_task", default_task))
+			_rs = render_template("update.html", **manager.users.get(usr, {"default_task": default_task}).get("default_task", default_task), **get_common_render_kwargs())
 			cache.set(_key, _rs, cache_life_medium)
 
 		return _rs
@@ -243,11 +249,11 @@ def update_form_post():
 		try:
 			t = Task(tid=int(request.form["tid"]), cmd=request.form["cmd"], wkd=request.form["wkd"], stdout=request.form["stdout"], stderr=request.form["stderr"], usr="", ngpu=int(request.form["ngpu"]) if request.form["ngpu"] else request.form["ngpu"], gpuids=None, force_gpuids=parse_none(request.form["force_gpuids"], func=int_split), real_gpuid_args=parse_none(request.form["real_gpuid_args"]), timeout=parse_none(request.form["timeout"], func=float), email=request.form["email"], desc=request.form["desc"], pid=None, ctime=None, stime=None, etime=None, status=None)
 			if manager.update_task(t, usr):
-				return render_template("update.html", ret="更新成功,任务ID %d" % (t.tid,), **request.form)
+				return render_template("update.html", ret="更新成功,任务ID %d" % (t.tid,), **request.form, **get_common_render_kwargs())
 			else:
-				return render_template("update.html", ret="更新失败.", **request.form)
+				return render_template("update.html", ret="更新失败.", **request.form, **get_common_render_kwargs())
 		except Exception as e:
-			return render_template("update.html", ret="更新失败,异常 %s" % (str(e),), **request.form)
+			return render_template("update.html", ret="更新失败,异常 %s" % (str(e),), **request.form, **get_common_render_kwargs())
 
 @app.route("/cancel", methods=["GET"])
 @app.route("/cancel/<string:str_taskid>", methods=["GET"])
@@ -269,16 +275,16 @@ def cancel_form_get(str_taskid=""):
 			_key = "/cancel"
 			_rs = cache.get(_key, None)
 			if _rs is None:
-				_rs = render_template("cancel.html")
+				_rs = render_template("cancel.html", **get_common_render_kwargs())
 				cache.set(_key, _rs, cache_life_long)
 			return _rs
 		elif manager.users[usr].is_unsafe():
 			return redirect("/setting?redirect_url=%s" % (quote(request.url),), code=302)
 		else:
 			try:
-				return render_template("cancel.html", ret=cancel_task(_task_id, usr), tid=_str_taskid)
+				return render_template("cancel.html", ret=cancel_task(_task_id, usr), tid=_str_taskid, **get_common_render_kwargs())
 			except Exception as e:
-				return render_template("cancel.html", ret="取消失败,异常 %s" % (str(e),), tid=_str_taskid)
+				return render_template("cancel.html", ret="取消失败,异常 %s" % (str(e),), tid=_str_taskid, **get_common_render_kwargs())
 
 @app.route("/cancel", methods=["POST"])
 def cancel_form_post():
@@ -290,9 +296,9 @@ def cancel_form_post():
 		return redirect("/setting?redirect_url=%s" % (quote("/cancel"),), code=302)
 	else:
 		try:
-			return render_template("cancel.html", ret=cancel_task(int(request.form["tid"]), usr), **request.form)
+			return render_template("cancel.html", ret=cancel_task(int(request.form["tid"]), usr), **request.form, **get_common_render_kwargs())
 		except Exception as e:
-			return render_template("cancel.html", ret="取消失败,异常 %s" % (str(e),), **request.form)
+			return render_template("cancel.html", ret="取消失败,异常 %s" % (str(e),), **request.form, **get_common_render_kwargs())
 
 @app.route("/dump", methods=["GET"])
 @app.route("/dump/<string:str_cmd>", methods=["GET"])
@@ -325,14 +331,14 @@ def dump_form_get(str_cmd=""):
 					elif _cmd.startswith("task "):
 						manager.dump_usr_done_tasks_tid(usr, *[int(_) for _ in _cmd.split()[1:] if _])
 						_success = True
-					return render_template("dump.html", ret="完成", cmd=_cmd) if _success else render_template("dump.html", ret="失败,只接受all或整数,或task taskID(s)", cmd=_cmd)
+					return render_template("dump.html", ret="完成", cmd=_cmd, **get_common_render_kwargs()) if _success else render_template("dump.html", ret="失败,只接受all或整数,或task taskID(s)", cmd=_cmd, **get_common_render_kwargs())
 				except Exception as e:
-					return render_template("dump.html", ret="取消失败,异常 %s" % (str(e),), tid=_str_taskid)
+					return render_template("dump.html", ret="取消失败,异常 %s" % (str(e),), tid=_str_taskid, **get_common_render_kwargs())
 		else:
 			_key = "/dump"
 			_rs = cache.get(_key, None)
 			if _rs is None:
-				_rs = render_template("dump.html")
+				_rs = render_template("dump.html", **get_common_render_kwargs())
 				cache.set(_key, _rs, cache_life_long)
 			return _rs
 
@@ -350,19 +356,19 @@ def dump_form_post():
 			_rt = None
 			if _cmd == "all":
 				manager.dump_usr_done_tasks(usr)
-				_rt = render_template("dump.html", ret="完成", **request.form)
+				_rt = render_template("dump.html", ret="完成", **request.form, **get_common_render_kwargs())
 			elif _cmd.isdigit():
 				manager.dump_usr_done_tasks(usr, k=int(_cmd))
-				_rt = render_template("dump.html", ret="完成", **request.form)
+				_rt = render_template("dump.html", ret="完成", **request.form, **get_common_render_kwargs())
 			elif _cmd.startswith("task "):
 				manager.dump_usr_done_tasks_tid(usr, *[int(_) for _ in _cmd.split()[1:] if _])
-				_rt = render_template("dump.html", ret="完成", cmd=_cmd)
+				_rt = render_template("dump.html", ret="完成", cmd=_cmd, **get_common_render_kwargs())
 			if _rt is None:
-				return render_template("dump.html", ret="失败,只接受all或整数,或task taskID(s)", **request.form)
+				return render_template("dump.html", ret="失败,只接受all或整数,或task taskID(s)", **request.form, **get_common_render_kwargs())
 			else:
 				return _rt
 		except Exception as e:
-			return render_template("dump.html", ret="失败,异常 %s" % (str(e),), **request.form)
+			return render_template("dump.html", ret="失败,异常 %s" % (str(e),), **request.form, **get_common_render_kwargs())
 
 @app.route("/status", methods=["GET"])
 def status_form_get():
@@ -379,20 +385,24 @@ def status_form_get():
 				rsd = {"ret": "完成"}
 				if refresh_time is not None:
 					rsd["refresh_time"] = refresh_time
-				tmp = manager.get_done_tasks()
-				if tmp:
-					rsd["done_tasks"] = build_html_task_table(_is_admin, usr, content=tmp)
-				tmp = manager.get_run_tasks()
-				if tmp:
-					rsd["run_tasks"] = build_html_task_table(_is_admin, usr, content=tmp)
-				tmp = manager.get_wait_tasks()
-				if tmp:
-					rsd["wait_tasks"] = build_html_task_table(_is_admin, usr, content=tmp)
-				_rs = render_template("status.html", **rsd)
+				_task_key = "/status/tasks"
+				_tasks = cache.get(_task_key, None)
+				if _tasks is None:
+					_done_tasks, _run_tasks, _wait_tasks = manager.get_done_tasks(), manager.get_run_tasks(), manager.get_wait_tasks()
+					cache.set(_task_key, (_done_tasks, _run_tasks, _wait_tasks,), cache_life_long)
+				else:
+					_done_tasks, _run_tasks, _wait_tasks = _tasks
+				if _done_tasks:
+					rsd["done_tasks"] = build_html_task_table(_is_admin, usr, content=_done_tasks)
+				if _run_tasks:
+					rsd["run_tasks"] = build_html_task_table(_is_admin, usr, content=_run_tasks)
+				if _wait_tasks:
+					rsd["wait_tasks"] = build_html_task_table(_is_admin, usr, content=_wait_tasks)
+				_rs = render_template("status.html", **rsd, **get_common_render_kwargs())
 				cache.set(_key, _rs, cache_life_long)
 			return _rs
 		except Exception as e:
-			return render_template("status.html", ret="查询失败,异常 %s" % (str(e),))
+			return render_template("status.html", ret="查询失败,异常 %s" % (str(e),), **get_common_render_kwargs())
 
 @app.route("/userinfo", methods=["GET"])
 def userinfo_form_get():
@@ -418,11 +428,11 @@ def userinfo_form_get():
 				if tmp:
 					tmp.sort()
 					rsd["admins"] = build_user_table(content=tmp, is_admin=_is_admin)
-				_rs = render_template("userinfo.html", **rsd)
+				_rs = render_template("userinfo.html", **rsd, **get_common_render_kwargs())
 				cache.set(_key, _rs, cache_life_long)
 			return _rs
 		except Exception as e:
-			return render_template("userinfo.html", ret="查询失败,异常 %s" % (str(e),))
+			return render_template("userinfo.html", ret="查询失败,异常 %s" % (str(e),), **get_common_render_kwargs())
 
 @app.route("/query", methods=["GET"])
 @app.route("/query/<string:str_user>", methods=["GET"])
@@ -445,12 +455,12 @@ def query_form_get(str_user=""):
 			try:
 				return query_user(_user, usr)
 			except Exception as e:
-				return render_template("query.html", ret="查询失败,异常 %s" % (str(e),), usr=_user)
+				return render_template("query.html", ret="查询失败,异常 %s" % (str(e),), usr=_user, **get_common_render_kwargs())
 		else:
 			_key = "/query"
 			_rs = cache.get(_key, None)
 			if _rs is None:
-				_rs = render_template("query.html")
+				_rs = render_template("query.html", **get_common_render_kwargs())
 				cache.set(_key, _rs, cache_life_long)
 			return _rs
 
@@ -464,7 +474,7 @@ def query_form_post():
 		try:
 			return query_user(request.form["usr"] if request.form["usr"] else usr, usr)
 		except Exception as e:
-			return render_template("query.html", ret="查询失败,异常 %s" % (str(e),), **request.form)
+			return render_template("query.html", ret="查询失败,异常 %s" % (str(e),), **request.form, **get_common_render_kwargs())
 
 @app.route("/setting", methods=["GET"])
 @app.route("/setting/<string:str_user>", methods=["GET"])
@@ -491,14 +501,14 @@ def setting_form_get(str_user=""):
 					_req_user = unquote(_req_user)
 					if _req_user in manager.users:
 						_usr = _req_user
-		_setting_self = usr == _usr
+		_setting_self = (usr == _usr)
 		try:
 			_user_dict = manager.users[_usr].state_dict()
 			if "passwd" in _user_dict:
 				del _user_dict["passwd"]
-			return render_template("setting.html", in_root_mode=_in_root_mode, setting_self=_setting_self, is_admin=_is_admin, **_user_dict, **manager.users.get(_usr, {"default_task": default_task}).get("default_task", default_task), **_r_args)
+			return render_template("setting.html", in_root_mode=_in_root_mode, setting_self=_setting_self, is_admin=_is_admin, **_user_dict, **manager.users.get(_usr, {"default_task": default_task}).get("default_task", default_task), **_r_args, **get_common_render_kwargs())
 		except Exception as e:
-			return render_template("setting.html", ret="失败,异常 %s" % (str(e),), in_root_mode=_in_root_mode, serv_usr=manager.users[_usr].serv_usr, setting_self=_setting_self, is_admin=_is_admin, **_r_args)
+			return render_template("setting.html", ret="失败,异常 %s" % (str(e),), in_root_mode=_in_root_mode, serv_usr=manager.users[_usr].serv_usr, setting_self=_setting_self, is_admin=_is_admin, **_r_args, **get_common_render_kwargs())
 
 @app.route("/setting", methods=["POST"])
 @app.route("/setting/<string:str_user>", methods=["POST"])
@@ -514,7 +524,7 @@ def setting_form_post(str_user=""):
 			_r_args["redirect_url"] = quote(redirect_url)
 		_usr, _in_root_mode = usr, in_root_mode
 		_is_admin = usr in manager.admin_users
-		if usr in manager.admin_users:
+		if _is_admin:
 			_in_root_mode = False
 			_str_user = unquote(str_user)
 			if _str_user and (_str_user in manager.users):
@@ -525,22 +535,22 @@ def setting_form_post(str_user=""):
 					_req_user = unquote(_req_user)
 					if _req_user in manager.users:
 						_usr = _req_user
-		_setting_self = usr == _usr
+		_setting_self = (usr == _usr)
 		try:
 			_arg_d = {"passwd": request.form["passwd"], "default_task": {k: request.form[k] for k in default_task.keys()}}
 			if _is_admin:
 				_arg_d["priority"] = request.form["priority"]
 			if _in_root_mode:
 				manager.add_user(_usr, serv_passwd=request.form["serv_passwd"], **_arg_d)
-				return render_template("setting.html", ret="成功.", usr=_usr, in_root_mode=_in_root_mode, serv_usr=manager.users[_usr].serv_usr, setting_self=_setting_self, is_admin=_is_admin, **request.form, **_r_args) if (redirect_url is None) or manager.users[_usr].is_unsafe() else redirect(unquote(redirect_url), code=302)
+				return render_template("setting.html", ret="成功.", usr=_usr, in_root_mode=_in_root_mode, serv_usr=manager.users[_usr].serv_usr, setting_self=_setting_self, is_admin=_is_admin, **request.form, **_r_args, **get_common_render_kwargs()) if (redirect_url is None) or manager.users[_usr].is_unsafe() else redirect(unquote(redirect_url), code=302)
 			else:
 				manager.add_user(_usr, serv_usr=request.form["serv_usr"], serv_passwd=request.form["serv_passwd"] if _setting_self else "", **_arg_d)
-				return render_template("setting.html", ret="成功.", usr=_usr, in_root_mode=_in_root_mode, setting_self=_setting_self, is_admin=_is_admin, **request.form, **_r_args) if (redirect_url is None) or manager.users[_usr].is_unsafe() else redirect(unquote(redirect_url), code=302)
+				return render_template("setting.html", ret="成功.", usr=_usr, in_root_mode=_in_root_mode, setting_self=_setting_self, is_admin=_is_admin, **request.form, **_r_args, **get_common_render_kwargs()) if (redirect_url is None) or manager.users[_usr].is_unsafe() else redirect(unquote(redirect_url), code=302)
 		except Exception as e:
 			_ad = {"usr": _usr, "in_root_mode": _in_root_mode, "setting_self": _setting_self, "is_admin": _is_admin}
 			if _in_root_mode:
 				_ad["serv_usr"] = manager.users[_usr].serv_usr
-			return render_template("setting.html", ret="失败,异常 %s" % (str(e),), **_ad, **request.form, **_r_args)
+			return render_template("setting.html", ret="失败,异常 %s" % (str(e),), **_ad, **request.form, **_r_args, **get_common_render_kwargs())
 
 @app.route("/admin", methods=["GET"])
 def admin_form_get():
@@ -550,17 +560,17 @@ def admin_form_get():
 		_key = ("/admin", False,)
 		_rs = cache.get(_key, None)
 		if _rs is None:
-			_rs = render_template("admin.html", show_passwd=False)
+			_rs = render_template("admin.html", show_passwd=False, **get_common_render_kwargs())
 			cache.set(_key, _rs, cache_life_long)
 		return _rs
 
 	usr = session.get("usr")
-	if manager.ctx["enable_super_passwd"]:
+	if ctx["enable_super_passwd"]:
 		_show_passwd = (usr is None) or (usr not in manager.admin_users)
 		_key = ("/admin", _show_passwd,)
 		_rs = cache.get(_key, None)
 		if _rs is None:
-			_rs = render_template("admin.html", show_passwd=_show_passwd)
+			_rs = render_template("admin.html", show_passwd=_show_passwd, **get_common_render_kwargs())
 			cache.set(_key, _rs, cache_life_long)
 		return _rs
 	else:
@@ -572,7 +582,7 @@ def admin_form_post():
 	usr = session.get("usr")
 	show_passwd = (usr is None) or (usr not in manager.admin_users) or manager.users[usr].is_unsafe()
 	try:
-		if (not show_passwd) or (manager.ctx["enable_super_passwd"] and (request.form.get("passwd", None) == admin_passwd)):
+		if (not show_passwd) or (ctx["enable_super_passwd"] and (request.form.get("passwd", None) == admin_passwd)):
 			cmd = request.form["cmd"].lower()
 			_success = False
 			if cmd.startswith("useradd "):
@@ -589,6 +599,12 @@ def admin_form_post():
 				_success = True
 			elif cmd.startswith("sudel "):
 				manager.del_admin(*cmd.strip().split()[1:])
+				_success = True
+			elif cmd.startswith("lockuser "):
+				manager.lock_user(*cmd.strip().split()[1:])
+				_success = True
+			elif cmd.startswith("unlockuser "):
+				manager.unlock_user(*cmd.strip().split()[1:])
 				_success = True
 			elif cmd == "stop":
 				manager.stop(force=False)
@@ -663,6 +679,14 @@ def admin_form_post():
 			elif cmd == "reschedule":
 				manager.reschedule()
 				_success = True
+			elif cmd.startswith("prompt "):
+				_v = cmd[7:].strip()
+				if _v.lower() == "none":
+					del ctx["prompt"]
+				else:
+					ctx["prompt"] = _v
+				cache.clear()
+				_success = True
 			elif cmd == "clear cache":
 				cache.clear()
 				_success = True
@@ -672,10 +696,10 @@ def admin_form_post():
 			elif cmd.startswith("unlock "):
 				manager.unlock(*cmd.strip().split()[1:])
 				_success = True
-			return render_template("admin.html", ret="完成", show_passwd=show_passwd, **request.form) if _success else render_template("admin.html", show_passwd=show_passwd, **request.form)
-		return render_template("admin.html", show_passwd=show_passwd, **request.form)
+			return render_template("admin.html", ret="完成", show_passwd=show_passwd, **request.form, **get_common_render_kwargs()) if _success else render_template("admin.html", show_passwd=show_passwd, **request.form, **get_common_render_kwargs())
+		return render_template("admin.html", show_passwd=show_passwd, **request.form, **get_common_render_kwargs())
 	except Exception as e:
-		return render_template("admin.html", ret="失败,异常 %s" % (str(e),), show_passwd=show_passwd, **request.form)
+		return render_template("admin.html", ret="失败,异常 %s" % (str(e),), show_passwd=show_passwd, **request.form, **get_common_render_kwargs())
 
 api_create_fail_dump = dumps({"ret": "创建失败."})
 @app.route("/api/create", methods=["POST"])
@@ -806,23 +830,29 @@ def api_userinfo_form_get():
 
 api_query_fail_dump = dumps({"ret": "查询失败."})
 @app.route("/api/query", methods=["POST"])
-def api_query_form_post():
+@app.route("/api/query/<string:str_user>", methods=["POST"])
+def api_query_form_post(str_user=""):
 
 	try:
 		request_form = loads(request.get_data())
 		usr, passwd = request_form["usr"], request_form["passwd"]
 		if manager.login(usr, passwd):
-			_key = ("/api/query", usr,)
+			_usr = usr
+			if str_user:
+				_str_user = unquote(str_user)
+				if _str_user and (_str_user in manager.users):
+					_usr = _str_user
+			_key = ("/api/query", _usr,)
 			_rs = cache.get(_key, None)
 			if _rs is None:
 				rsd = {}
-				tmp = manager.get_done_tasks_user(usr)
+				tmp = manager.get_done_tasks_user(_usr)
 				if tmp:
 					rsd["done_tasks"] = [task_info(task) for task in tmp]
-				tmp = manager.get_run_tasks_user(usr)
+				tmp = manager.get_run_tasks_user(_usr)
 				if tmp:
 					rsd["run_tasks"] = [task_info(task) for task in tmp]
-				tmp = manager.get_wait_tasks_user(usr)
+				tmp = manager.get_wait_tasks_user(_usr)
 				if tmp:
 					rsd["wait_tasks"] = [task_info(task) for task in tmp]
 				_rs = dumps(rsd)
@@ -835,21 +865,27 @@ def api_query_form_post():
 api_setting_success_dump = dumps({"ret": "成功."})
 api_setting_fail_dump = dumps({"ret": "设置失败."})
 @app.route("/api/setting", methods=["POST"])
-def api_setting_form_post():
+@app.route("/api/setting/<string:str_user>", methods=["POST"])
+def api_setting_form_post(str_user=""):
 
 	request_form = loads(request.get_data())
 	usr, passwd = request_form["usr"], request_form["passwd"]
 	if manager.login(usr, passwd):
 		_is_admin = usr in manager.admin_users
 		_in_root_mode = in_root_mode and (not _is_admin)
+		_usr = usr
+		if _is_admin and str_user:
+			_str_user = unquote(str_user)
+			if _str_user and (_str_user in manager.users):
+				_usr = _str_user
 		try:
 			_arg_d = {"passwd": request_form["new_passwd"], "default_task": {k: request_form[k] for k in default_task.keys()}}
 			if _is_admin:
 				_arg_d["priority"] = request_form["priority"]
 			if _in_root_mode:
-				manager.add_user(usr, serv_passwd=request_form["serv_passwd"], **_arg_d)
+				manager.add_user(_usr, serv_passwd=request_form["serv_passwd"], **_arg_d)
 			else:
-				manager.add_user(usr, serv_usr=request_form["serv_usr"], serv_passwd=request_form["serv_passwd"], **_arg_d)
+				manager.add_user(_usr, serv_usr=request_form["serv_usr"], serv_passwd=request_form["serv_passwd"] if usr == _usr else "", **_arg_d)
 			return api_setting_success_dump
 		except Exception as e:
 			return dumps({"Exception": str(e)})
@@ -863,7 +899,7 @@ def api_admin_form_post():
 	try:
 		request_form = loads(request.get_data())
 		usr, passwd = request_form["usr"], request_form["passwd"]
-		if (manager.ctx["enable_super_passwd"] and (request_form["passwd"] == admin_passwd)) or (manager.login(usr, passwd) and (usr in manager.admin_users) and manager.users[usr].is_safe()):
+		if (ctx["enable_super_passwd"] and (request_form["passwd"] == admin_passwd)) or (manager.login(usr, passwd) and (usr in manager.admin_users) and manager.users[usr].is_safe()):
 			cmd = request_form["cmd"].lower()
 			if cmd.startswith("useradd "):
 				manager.add_user(*cmd.strip().split()[1:])
@@ -879,6 +915,12 @@ def api_admin_form_post():
 				return api_admin_success_dump
 			elif cmd.startswith("sudel "):
 				manager.del_admin(*cmd.strip().split()[1:])
+				return api_admin_success_dump
+			elif cmd.startswith("lockuser "):
+				manager.lock_user(*cmd.strip().split()[1:])
+				return api_admin_success_dump
+			elif cmd.startswith("unlockuser "):
+				manager.unlock_user(*cmd.strip().split()[1:])
 				return api_admin_success_dump
 			elif cmd == "stop":
 				manager.stop()
@@ -958,6 +1000,14 @@ def api_admin_form_post():
 			elif cmd == "reschedule":
 				manager.reschedule()
 				return api_admin_success_dump
+			elif cmd.startswith("prompt "):
+				_v = cmd[7:].strip()
+				if _v.lower() == "none":
+					del ctx["prompt"]
+				else:
+					ctx["prompt"] = _v
+				cache.clear()
+				return api_admin_success_dump
 			elif cmd == "clear cache":
 				cache.clear()
 				return api_admin_success_dump
@@ -980,6 +1030,7 @@ def favicon():
 
 manager = Manager(gpu_ids=use_gpus, sleep_secs=sleep_secs, statef=state_file, done_taskf=done_task_file, save_iter=save_every, auto_dump_p=auto_dump_p, auto_dump_thres=auto_dump_thres, cache_clean_time=cache_clean_time, round_tid=round_tid)
 cache = manager.cache
+ctx = manager.ctx
 
 if __name__ == "__main__":
 	try:
@@ -987,6 +1038,6 @@ if __name__ == "__main__":
 	except:
 		pass
 	manager.start()
-	if ("enable_super_passwd" not in manager.ctx) or (len(manager.admin_users) == 0):
-		manager.ctx["enable_super_passwd"] = True
+	if ("enable_super_passwd" not in ctx) or (len(manager.admin_users) == 0):
+		ctx["enable_super_passwd"] = True
 	app.run(host="0.0.0.0", port=use_port, debug=False, threaded=True, use_reloader=False, use_debugger=False, use_evalex=False)

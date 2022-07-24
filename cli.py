@@ -2,6 +2,7 @@
 
 import sys
 from getpass import getpass
+from urllib.parse import quote
 from requests import post, get
 from json import dumps, loads
 
@@ -27,5 +28,8 @@ def handle(url, inputl):
 
 if __name__ == "__main__":
 
-	if sys.argv[1] in apid:
-		handle("%s%s%s" % (host, "/api/", sys.argv[1],), apid[sys.argv[1]])
+	_arg = sys.argv[1]
+	_ = _arg.find("/")
+	_api_key = _arg if _ < 0 else _arg[:_]
+	if _api_key in apid:
+		handle("%s%s%s" % (host, "/api/", quote(_arg),), apid[_api_key])

@@ -134,6 +134,10 @@ wait_task_desc = lambda gpuid: "等待GPU %d任务" % (gpuid,)
 
 `sudel a b c ...`：取消`a b c ...`管理员身份。
 
+`lockuser a b c ...`：禁止`a b c ...`登录。
+
+`unlockuser a b c ...`：允许`a b c ...`登录。
+
 `stop`：停止调度服务。
 
 `force stop`：强制停止调度服务。
@@ -168,6 +172,8 @@ wait_task_desc = lambda gpuid: "等待GPU %d任务" % (gpuid,)
 
 `reschedule`：重新调度，当调度结果和算法预期不同时使用，通常不需要使用。
 
+`prompt xxx`：设置提示信息为`xxx`，`None`取消提示信息。
+
 `clear cache`：清空页面缓存，当页面显示和实际状态不一致时使用，通常不需要使用。
 
 `lock/unlock lock_name`：锁/解锁`manager`的锁对象`lock_name`，通常不应使用。
@@ -198,7 +204,7 @@ Python 3.10.4，Intel Core M3-7Y30 CPU，视不同的请求类型，每秒可处
 
 ## 其它说明
 
-通过`CUDA_VISIBLE_DEVICES`配置任务的GPU，所以任务执行的脚本和程序中不应该修改此环境变量，否则会使用其它可能正在使用的GPU，导致分配的GPU没有得到使用，遇到显存不足等错误。
+通过`CUDA_VISIBLE_DEVICES`和`NVIDIA_VISIBLE_DEVICES`配置任务的GPU，所以任务执行的脚本和程序中不应该修改这两个环境变量，否则会使用其它可能正在使用的GPU，导致分配的GPU没有得到使用，遇到显存不足等错误。
 
 任务的工作路径应使用绝对路径，执行任务前会自动切换到任务配置的工作路径，所以任务脚本中不需要再通过`cd`命令切换到配置的工作路径。
 

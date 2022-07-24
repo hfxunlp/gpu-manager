@@ -121,15 +121,22 @@ class Cache:
 				for _key in _c_keys:
 					del self.data[_key]
 
+	# with self.data_lck holded when call this function
+	def pop_wgz(self, key):
+
+		if key in self.data:
+			_ = get_str_bytes(self.data.pop(key)[-1])
+			if hasattr(_, "__hash__"):
+				_k = ("gzip", _,)
+				if _k in self.data:
+					del self.data[_k]
+
 	def clear_wgz(self, *args):
 
 		if args:
 			with self.data_lck:
 				for _ in args:
-					if _ in self.data:
-						_k = ("gzip", get_str_bytes(self.data.pop(_)[-1]),)
-						if _k in self.data:
-							del self.data[_k]
+					self.pop_wgz(_)
 		else:
 			with self.data_lck:
 				self.data.clear()
@@ -143,9 +150,7 @@ class Cache:
 					_c_keys.append(_)
 			if _c_keys:
 				for _ in _c_keys:
-					_k = ("gzip", get_str_bytes(self.data.pop(_)[-1]),)
-					if _k in self.data:
-						del self.data[_k]
+					self.pop_wgz(_)
 
 	def clear_funcs_wgz(self, *funcs, func=any):
 
@@ -156,9 +161,7 @@ class Cache:
 					_c_keys.append(_key)
 			if _c_keys:
 				for _key in _c_keys:
-					_k = ("gzip", get_str_bytes(self.data.pop(_key)[-1]),)
-					if _k in self.data:
-						del self.data[_k]
+					self.pop_wgz(_key)
 
 	def clean(self):
 
@@ -182,9 +185,7 @@ class Cache:
 					_c_keys.append(_key)
 			if _c_keys:
 				for _key in _c_keys:
-					_k = ("gzip", get_str_bytes(self.data.pop(_key)[-1]),)
-					if _k in self.data:
-						del self.data[_k]
+					self.pop_wgz(_key)
 
 	def cleaner_core(self, sleep_time):
 
@@ -207,72 +208,3 @@ class Cache:
 
 		with self.data_lck:
 			yield from self.data.items()
-
-def clear_gzip_cache(cm):
-
-	cm.clear_func(lambda x: isinstance(x, tuple) and x[0] == "gzip")
-
-def clear_status_cache(cm):
-
-	cm.clear_wgz("/api/status")
-	cm.clear_func_wgz(lambda x: isinstance(x, tuple) and x[0] == "/status")
-
-def clear_query_cache(cm, usrs=None):
-
-	if usrs is None:
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and x[0].endswith("/query"))
-	else:
-		_us = set(usrs)
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and x[0].endswith("/query") and (x[1] in _us))
-
-def clear_query_cache(cm, usrs=None):
-
-	if usrs is None:
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and x[0].endswith("/query"))
-	else:
-		_us = set(usrs)
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and x[0].endswith("/query") and (x[1] in _us))
-
-def clear_add_admin_usrtask_cache(cm, usrs=None):
-
-	if usrs is None:
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and (x[0] == "/query" or x[0] == "/status"))
-	else:
-		_us = set(usrs)
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and (x[0] == "/query" or x[0] == "/status") and (x[-1] in _us))
-
-def clear_usrtask_cache(cm, usrs=None):
-
-	cm.clear_wgz("/api/status")
-	if usrs is None:
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and (x[0] == "/status" or x[0].endswith("/query")))
-	else:
-		_us = set(usrs)
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and (x[0] == "/status" or (x[0].endswith("/query") and (x[1] in _us))))
-
-def clear_userinfo_cache(cm):
-
-	cm.clear_func_wgz(lambda x: isinstance(x, tuple) and x[0].endswith("/userinfo"))
-
-def clear_createid_cache(cm, task_id):
-
-	cm.clear_func_wgz(lambda x: isinstance(x, tuple) and len(x) == 3 and x[0] == "/create" and x[-1] == task_id)
-
-def clear_usrcreate_cache(cm, usrs=None):
-
-	if usrs is None:
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and (x[0] == "/create"))
-	else:
-		cm.clear_wgz(*[("/create", _,) for _ in usrs])
-
-def clear_usr_cache(cm, usrs=None):
-
-	if usrs is None:
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple))
-	else:
-		_us = set(usrs)
-		cm.clear_func_wgz(lambda x: isinstance(x, tuple) and (x[1] in _us))
-
-def clear_all_temp_cache(cm):
-
-	cm.clear_all_temp()
