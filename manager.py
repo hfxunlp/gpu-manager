@@ -15,7 +15,7 @@ from multiprocessing import Process
 from threading import Thread, Lock
 from subprocess import run, DEVNULL, STDOUT
 import pickle
-from utils.base import get_exp_p
+from utils.base import map_device, get_exp_p
 from utils.custom_hash import hash_func
 from utils.cache.cust import Cache
 from utils.mail import send_mail_task_bg
@@ -23,7 +23,7 @@ from utils.nvsm import get_gpu_pids
 from utils.prcs.base import is_alive, join
 from utils.prcs.ext import kill_ptree
 
-from cnfg import admin_passwd, default_task, digest_size, max_caches, cache_drop_p, wait_task_cmd, wait_task_wkd, wait_task_desc, root_mode, aggressive_clean, smtp_host, smtp_port, smtp_user, smtp_passwd, smtp_subject
+from cnfg import device_id_map, admin_passwd, default_task, digest_size, max_caches, cache_drop_p, wait_task_cmd, wait_task_wkd, wait_task_desc, root_mode, aggressive_clean, smtp_host, smtp_port, smtp_user, smtp_passwd, smtp_subject
 
 uid, gid = getuid(), getgid()
 in_root_mode = (uid == 0) and root_mode
@@ -145,7 +145,7 @@ def cust_run_as(exec_cmd, usr, passwd, stdout=DEVNULL, stderr=DEVNULL, cwd=None,
 def start_task_core(task, usr, passwd):
 
 	_rt_code = None
-	_cuda_devices_str = ",".join([str(gpuid) for gpuid in task.gpuids])
+	_cuda_devices_str = ",".join([str(gpuid) for gpuid in (task.gpuids if device_id_map is None else map_device(task.gpuids, device_id_map))])
 	_exec_cmd = task.cmd if task.real_gpuid_args is None else "%s %s%s" % (task.cmd, task.real_gpuid_args, _cuda_devices_str,)
 	_env={"CUDA_VISIBLE_DEVICES": _cuda_devices_str, "NVIDIA_VISIBLE_DEVICES": _cuda_devices_str}
 	_stdout, _stderr = io_dict.get(task.stdout.lower(), task.stdout), io_dict.get(task.stderr.lower(), task.stderr)

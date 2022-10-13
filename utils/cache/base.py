@@ -126,7 +126,7 @@ class Cache:
 
 		if key in self.data:
 			_ = get_str_bytes(self.data.pop(key)[-1])
-			if hasattr(_, "__hash__"):
+			if isinstance(_, bytes):
 				_k = ("gzip", _,)
 				if _k in self.data:
 					del self.data[_k]

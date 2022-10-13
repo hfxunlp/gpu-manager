@@ -4,6 +4,7 @@ from datetime import timedelta
 
 use_port = 8888
 use_gpus = list(range(4))
+device_id_map = None
 admin_passwd = "atestb"
 sleep_secs = 1.0
 save_every = 900.0
