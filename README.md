@@ -39,7 +39,7 @@ use_port = 8888
 # 管理的GPU ID
 use_gpus = list(range(4))
 # GPU ID重映射，用于单卡多任务调度，例如{i: i // 2 for i in range(4)}可将0、1映射为0，2、3映射为1。
-device_id_map = None
+device_id_map = {}
 # 超级密码
 admin_passwd = "atestb"
 # 任务调度周期

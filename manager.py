@@ -15,7 +15,7 @@ from multiprocessing import Process
 from threading import Thread, Lock
 from subprocess import run, DEVNULL, STDOUT
 import pickle
-from utils.base import map_device, get_exp_p
+from utils.base import map_device, get_duplicate_items, get_exp_p
 from utils.custom_hash import hash_func
 from utils.cache.cust import Cache
 from utils.mail import send_mail_task_bg
@@ -35,6 +35,8 @@ io_dict = {DEVNULL: DEVNULL, "/dev/null": DEVNULL, "devnull": DEVNULL, STDOUT: S
 
 _statef_permission = S_IRUSR | S_IWUSR
 _done_taskf_permission = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
+
+_ignore_check_device_ids = set(get_duplicate_items(device_id_map.values()))
 
 def get_usr_ids(usr):
 
@@ -145,7 +147,7 @@ def cust_run_as(exec_cmd, usr, passwd, stdout=DEVNULL, stderr=DEVNULL, cwd=None,
 def start_task_core(task, usr, passwd):
 
 	_rt_code = None
-	_cuda_devices_str = ",".join([str(gpuid) for gpuid in (task.gpuids if device_id_map is None else map_device(task.gpuids, device_id_map))])
+	_cuda_devices_str = ",".join([str(gpuid) for gpuid in map_device(task.gpuids, device_id_map)])
 	_exec_cmd = task.cmd if task.real_gpuid_args is None else "%s %s%s" % (task.cmd, task.real_gpuid_args, _cuda_devices_str,)
 	_env={"CUDA_VISIBLE_DEVICES": _cuda_devices_str, "NVIDIA_VISIBLE_DEVICES": _cuda_devices_str}
 	_stdout, _stderr = io_dict.get(task.stdout.lower(), task.stdout), io_dict.get(task.stderr.lower(), task.stderr)
@@ -1311,9 +1313,11 @@ class Manager(DictSerial):
 			with self.gpu_free_lck:
 				_wait_task_d = {}
 				for _gpuid in self.gpu_free:
-					_pids = get_gpu_pids(_gpuid, timeout=self.sleep_secs)
-					if _pids:
-						_wait_task_d[_gpuid] = _pids
+					_ = device_id_map.get(_gpuid, _gpuid)
+					if _ not in _ignore_check_device_ids:
+						_pids = get_gpu_pids(_, timeout=self.sleep_secs)
+						if _pids:
+							_wait_task_d[_gpuid] = _pids
 				if _wait_task_d:
 					for _gpuid, _pids in _wait_task_d.items():
 						self.start_task(Task(tid=- (_gpuid + 1), cmd=wait_task_cmd(_pids), wkd=wait_task_wkd, stdout="/dev/null", stderr="/dev/null", usr=None, ngpu=1, gpuids=[_gpuid], force_gpuids=[_gpuid], real_gpuid_args=None, timeout=None, email="", desc=wait_task_desc(_gpuid) if wait_task_desc else None, pid=None, ctime=None, stime=None, etime=None, status=None), None, None)

@@ -21,6 +21,14 @@ def map_device(lin, mp):
 
 	return rs
 
+def get_duplicate_items(lin):
+
+	_c = {}
+	for _ in lin:
+		_c[_] = _c.get(_, 0) + 1
+
+	return [_ for _, _v in _c.items() if _v > 1]
+
 def get_exp_p(thres, total, p):
 
 	return 1.0 - (1.0 - p) ** ceil(log(float(thres) / total) / log(1.0 - p))
