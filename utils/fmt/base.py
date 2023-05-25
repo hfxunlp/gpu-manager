@@ -1,6 +1,7 @@
 #encoding: utf-8
 
 from time import ctime
+
 from cnfg import default_task
 
 def parse_none(strin, func=None):
@@ -38,10 +39,10 @@ def extract_create_dict(dictin, dedict=default_task):
 	for _key in ("cmd", "wkd", "stdout", "stderr", "usr", "email", "desc",):
 		rsd[_key] = dictin.get(_key, dedict.get(_key, ""))
 
-	rsd["ngpu"] = str(dictin["ngpu"]) if "ngpu" in dictin else dedict["ngpu"]
-	rsd["force_gpuids"] = str_none(dictin["force_gpuids"], func=str_join) if "force_gpuids" in dictin else dedict["force_gpuids"]
-	rsd["real_gpuid_args"] = str_none(dictin["real_gpuid_args"], func=str_join) if "real_gpuid_args" in dictin else dedict["real_gpuid_args"]
-	rsd["timeout"] = str(dictin["timeout"]) if "timeout" in dictin else dedict["timeout"]
+	rsd["ngpu"] = str(dictin["ngpu"]) if "ngpu" in dictin else dedict.get("ngpu", "1")
+	rsd["force_gpuids"] = str_none(dictin["force_gpuids"], func=str_join) if "force_gpuids" in dictin else dedict.get("force_gpuids", "None")
+	rsd["real_gpuid_args"] = str_none(dictin["real_gpuid_args"], func=str_join) if "real_gpuid_args" in dictin else dedict.get("real_gpuid_args", "None")
+	rsd["timeout"] = str(dictin["timeout"]) if "timeout" in dictin else dedict.get("timeout", "None")
 
 	return rsd
 

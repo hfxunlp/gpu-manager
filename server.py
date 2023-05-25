@@ -1,22 +1,23 @@
 #encoding: utf-8
 
-from manager import Task, Manager, in_root_mode
-from time import sleep
-from threading import Thread
-from os import chmod
-from stat import S_IRUSR, S_IWUSR, S_IXUSR
-from gzip import compress
-from flask import Flask, request, render_template, send_from_directory, session, redirect, url_for
-from json import loads, dumps
 import os
-from urllib.parse import quote, unquote
+from flask import Flask, redirect, render_template, request, send_from_directory, session, url_for
+from gzip import compress
+from json import dumps, loads
+from os import chmod
 from pyhcrypt import get_rand_bytes
-from utils.custom_hash import hash_func
+from stat import S_IRUSR, S_IWUSR, S_IXUSR
+from threading import Thread
+from time import sleep
+from urllib.parse import quote, unquote
+
+from manager import Manager, Task, in_root_mode
 from utils.base import to_int
-from utils.fmt.base import task_info, extract_create_dict, extract_update_dict, parse_none, parse_str_bool, int_split
+from utils.custom_hash import hash_func
+from utils.fmt.base import extract_create_dict, extract_update_dict, int_split, parse_none, parse_str_bool, task_info
 from utils.fmt.html import build_html_task_table, build_user_table
 
-from cnfg import use_port, use_gpus, admin_passwd, sleep_secs, flask_compress_level, save_every, session_life_time, refresh_time, state_file, done_task_file, auto_dump_p, auto_dump_thres, cache_life_short, cache_life_medium, cache_life_long, cache_clean_time, round_tid, secret_key_length, hash_wd, default_task
+from cnfg import admin_passwd, auto_dump_p, auto_dump_thres, cache_clean_time, cache_life_long, cache_life_medium, cache_life_short, default_task, done_task_file, flask_compress_level, hash_wd, refresh_time, round_tid, save_every, secret_key_length, session_life_time, sleep_secs, state_file, use_gpus, use_port
 
 _cnfg_permission = S_IRUSR | S_IWUSR | S_IXUSR
 

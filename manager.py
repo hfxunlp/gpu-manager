@@ -1,29 +1,30 @@
 #encoding: utf-8
 
-from collections import OrderedDict
-from math import floor, inf
-from sys import exit as sys_exit
-from os import chdir, getpid, getuid, getgid, setuid, setgid, chmod, stat
-from os.path import exists as fs_check, getmtime
-from stat import S_IRUSR, S_IWUSR, S_IRGRP, S_IROTH, S_IWGRP, S_IWOTH
-from shlex import join as sh_join
-from pwd import getpwnam
-from time import time, sleep
-from lzma import compress, decompress
-from pyhcrypt import encrypt_bytes, decrypt_bytes
-from multiprocessing import Process
-from threading import Thread, Lock
-from subprocess import run, DEVNULL, STDOUT
 import pickle
-from utils.base import map_device, get_duplicate_items, get_exp_p
-from utils.custom_hash import hash_func
+from collections import OrderedDict
+from lzma import compress, decompress
+from math import floor, inf
+from multiprocessing import Process
+from os import chdir, chmod, getgid, getpid, getuid, setgid, setuid, stat
+from os.path import exists as fs_check, getmtime
+from pwd import getpwnam
+from pyhcrypt import decrypt_bytes, encrypt_bytes
+from shlex import join as sh_join
+from stat import S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR
+from subprocess import DEVNULL, STDOUT, run
+from sys import exit as sys_exit
+from threading import Lock, Thread
+from time import sleep, time
+
+from utils.base import get_duplicate_items, get_exp_p, map_device
 from utils.cache.cust import Cache
+from utils.custom_hash import hash_func
 from utils.mail import send_mail_task_bg
 from utils.nvsm import get_gpu_pids
 from utils.prcs.base import is_alive, join
 from utils.prcs.ext import kill_ptree
 
-from cnfg import device_id_map, admin_passwd, default_task, digest_size, max_caches, cache_drop_p, wait_task_cmd, wait_task_wkd, wait_task_desc, root_mode, aggressive_clean, smtp_host, smtp_port, smtp_user, smtp_passwd, smtp_subject
+from cnfg import admin_passwd, aggressive_clean, cache_drop_p, default_task as cnfg_default_task, device_id_map, digest_size, max_caches, root_mode, smtp_host, smtp_passwd, smtp_port, smtp_subject, smtp_user, wait_task_cmd, wait_task_desc, wait_task_wkd
 
 uid, gid = getuid(), getgid()
 in_root_mode = (uid == 0) and root_mode
@@ -402,9 +403,9 @@ class LockHolder(DictSerial):
 
 class User(DictSerial):
 
-	def __init__(self, usr=None, passwd=None, serv_usr=None, serv_passwd=None, priority=None, default_task=default_task):
+	def __init__(self, usr=None, passwd=None, serv_usr=None, serv_passwd=None, priority=None, default_task=None):
 
-		self.usr, self.passwd, self.serv_usr, self.serv_passwd, self.priority, self.default_task = usr, hash_func(passwd, usr=usr) if passwd and isinstance(passwd, str) else passwd, serv_usr, serv_passwd, 1.0 if priority is None else priority, default_task
+		self.usr, self.passwd, self.serv_usr, self.serv_passwd, self.priority, self.default_task = usr, hash_func(passwd, usr=usr) if passwd and isinstance(passwd, str) else passwd, serv_usr, serv_passwd, 1.0 if priority is None else priority, cnfg_default_task.copy() if default_task is None else default_task
 
 	def verify(self, passwd):
 
@@ -549,7 +550,7 @@ class Manager(DictSerial):
 		with self.user_lck:
 			return usr in self.users and self.users[usr].verify(passwd)
 
-	def add_user(self, usr, passwd="", serv_usr="", serv_passwd="", priority="", default_task=default_task):
+	def add_user(self, usr, passwd="", serv_usr="", serv_passwd="", priority="", default_task=None):
 
 		_reschedule = False
 		with self.user_lck:
@@ -579,7 +580,7 @@ class Manager(DictSerial):
 		with self.user_lck:
 			for usr in usrs:
 				if usr not in self.users:
-					self.users[usr] = User(usr=usr, passwd=usr, serv_usr=usr, serv_passwd="", priority=None, default_task=default_task)
+					self.users[usr] = User(usr=usr, passwd=usr, serv_usr=usr, serv_passwd="", priority=None, default_task=None)
 		self.cache.clear_userinfo_cache()
 
 	def del_user(self, *usrs):
@@ -1453,13 +1454,11 @@ class Manager(DictSerial):
 		for gpuid in gpuids:
 			if gpuid not in self.gpu_ids:
 				self.gpu_ids.add(gpuid)
-
-		with self.gil:
-			self.update_free_gpus()
+		self.update_free_gpus()
 
 	def update_free_gpus(self):
 
-		with self.gpu_free_lck:
+		with self.gil, self.gpu_free_lck:
 			_ = set(self.gpu_free)
 			with self.run_task_lck:
 				for tid, (p, task,) in self.run_tasks.items():
@@ -1648,14 +1647,20 @@ class Manager(DictSerial):
 				if _usr not in self.wait_tasks:
 					self.wait_tasks[_usr] = TaskList()
 				if isinstance(_wl_id, tuple):
-					_insert = True
+					_insert = _check_next_task_usr = True
 					if newid == 0:
 						with self.next_task_lck:
 							if (self.next_task is not None) and (self.next_task.usr == _usr):
 								self.wait_tasks[_usr].insert(0, self.next_task)
 								self.next_task = _task
 								_insert = False
+							else:
+								_check_next_task_usr = False
 					if _insert:
+						if _check_next_task_usr:
+							with self.next_task_lck:
+								if (self.next_task is not None) and (self.next_task.usr == _usr):
+									newid -= 1
 						self.wait_tasks[_usr].insert(newid, _task)
 				else:
 					if newid == 0:
@@ -1737,12 +1742,11 @@ class Manager(DictSerial):
 									for _ind in reversed(_del_ind):
 										self.pop_wait_tasks_nolck(_ind)
 						if _launch_tasks:
-							with self.gil:
-								for _task in _launch_tasks:
-									self.launch_one_task(_task)
-									_usr = _task.usr
-									if _usr not in _clean_usrs_cache:
-										_clean_usrs_cache.add(_usr)
+							for _task in _launch_tasks:
+								self.launch_one_task(_task)
+								_usr = _task.usr
+								if _usr not in _clean_usrs_cache:
+									_clean_usrs_cache.add(_usr)
 							_sleep_tag = False
 					if _sleep_tag:
 						sleep(self.sleep_secs)

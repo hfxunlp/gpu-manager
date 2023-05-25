@@ -8,7 +8,7 @@
 
 以将代码放在`/opt/gpu-manager`为例，推荐通过conda环境管理。
 
-创建conda环境，已环境名`gpuman`，python 3.10为例：`conda create -n gpuman python=3.10`。
+创建conda环境，已环境名`gpuman`，python 3.11为例：`conda create -n gpuman python=3.11`。
 
 激活conda环境：`conda activate gpuman`。
 
@@ -202,7 +202,7 @@ python train.py $@
 
 ## 性能
 
-Python 3.10.4，Intel Core M3-7Y30 CPU，视不同的请求类型，每秒可处理约200-400请求(由`test/pressure.py`测得)。
+Python 3.11.0，Intel Core M3-7Y30 CPU，视不同的请求类型，每秒可处理约300-550请求(由`test/pressure.py`测得)。
 
 ## 其它说明
 

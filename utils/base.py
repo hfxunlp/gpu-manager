@@ -1,6 +1,6 @@
 #encoding: utf-8
 
-from math import log, ceil
+from math import ceil, log
 
 def to_int(strin):
 

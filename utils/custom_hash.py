@@ -1,6 +1,7 @@
 #encoding: utf-8
 
 from hashlib import blake2b as hash_blake
+
 from cnfg import digest_size, hash_wd
 
 hash_key = hash_blake(hash_wd.encode("utf-8"), digest_size=hash_blake.MAX_KEY_SIZE).digest()

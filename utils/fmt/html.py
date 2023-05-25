@@ -1,7 +1,8 @@
 #encoding: utf-8
 
-from time import ctime
 from math import ceil
+from time import ctime
+
 from cnfg import num_user_line
 
 def get_action(is_admin, usr, task, str_tid=None):

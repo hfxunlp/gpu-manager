@@ -2,9 +2,10 @@
 
 import sys
 from getpass import getpass
-from requests import post, get
 from json import dumps, loads
+from requests import get, post
 from tqdm import tqdm
+from urllib.parse import quote
 
 host = "http://localhost:8888"
 
@@ -29,5 +30,8 @@ def handle(url, inputl, t):
 
 if __name__ == "__main__":
 
-	if sys.argv[1] in apid:
-		handle("%s%s%s" % (host, "/api/", sys.argv[1],), apid[sys.argv[1]], int(sys.argv[-1]))
+	_arg = sys.argv[1]
+	_ = _arg.find("/")
+	_api_key = _arg if _ < 0 else _arg[:_]
+	if _api_key in apid:
+		handle("%s%s%s" % (host, "/api/", quote(_arg),), apid[_api_key], int(sys.argv[-1]))

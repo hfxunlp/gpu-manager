@@ -3,6 +3,7 @@
 import smtplib
 from email.message import EmailMessage
 from multiprocessing import Process
+
 from utils.fmt.html import build_html_task_table_no_action
 
 SMTP = smtplib.SMTP_SSL

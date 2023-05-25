@@ -1,8 +1,9 @@
 #encoding: utf-8
 
-from manager import Task, Manager
 from random import randint, sample
 from time import sleep
+
+from manager import Manager, Task
 
 serv_user = "test"
 serv_passwd = "test"

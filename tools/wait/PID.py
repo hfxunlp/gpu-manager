@@ -1,9 +1,9 @@
 #encoding: utf-8
 
 import sys
-from os import getuid
 from math import inf
-from psutil import pid_exists, Process, wait_procs, STATUS_STOPPED, STATUS_TRACING_STOP, STATUS_ZOMBIE
+from os import getuid
+from psutil import Process, STATUS_STOPPED, STATUS_TRACING_STOP, STATUS_ZOMBIE, pid_exists, wait_procs
 from time import sleep
 
 def kill_ptree(p, wait_time=0.5):

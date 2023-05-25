@@ -2,9 +2,9 @@
 
 import sys
 from getpass import getpass
-from urllib.parse import quote
-from requests import post, get
 from json import dumps, loads
+from requests import get, post
+from urllib.parse import quote
 
 host = "http://localhost:8888"
 

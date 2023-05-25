@@ -1,9 +1,9 @@
 #encoding: utf-8
 
 from collections import OrderedDict
-from time import time, sleep
-from threading import Lock
 from math import floor
+from threading import Lock
+from time import sleep, time
 
 def get_str_bytes(x):
 
