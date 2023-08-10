@@ -1,0 +1,9 @@
+[Unit]
+Description=GPU Manager - Stopped Process Terminator
+After=network.target
+
+[Service]
+ExecStart=/bin/bash /opt/gpu-manager/start_nostop.sh
+
+[Install]
+WantedBy=default.target

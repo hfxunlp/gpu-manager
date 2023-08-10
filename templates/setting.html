@@ -7,6 +7,9 @@
 <p style="font-size:30px"><a href="/">主页</a></p>
 <form action="/setting{% if not setting_self %}/{{ usr | safe }}{% endif %}{% if redirect_url %}?redirect_url={{ redirect_url | safe }}{% endif %}" method="post">
 <p style="font-size:30px">帐号</p>
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}
 <p style="font-size:30px">
 用户名: {{ usr }}
 </p>
@@ -57,9 +60,6 @@
 <p><textarea rows="3" cols="50" type="text" style="font-size:30px" name="desc">{{ desc }}</textarea></p>
 <p><button type="submit" style="font-size:30px">保存</button></p>
 </form>
-{% if ret %}
-<p>{{ ret }}</p>
-{% endif %}
 {% if prompt %}
 <p>{{ prompt }}</p>
 {% endif %}

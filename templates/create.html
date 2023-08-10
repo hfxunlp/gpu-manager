@@ -8,6 +8,9 @@
 <a href="/">主页</a>
 <a href="/query">查询</a>
 </p>
+{% if ret %}
+<p>{{ ret }}</p>
+{% endif %}
 <form action="/create" method="post">
 <legend style="font-size:30px">工作路径:</legend>
 <p><input type="text" style="font-size:30px" name="wkd" value="{{ wkd }}" /></p>
@@ -31,9 +34,6 @@
 <p><textarea rows="3" cols="50" type="text" style="font-size:30px" name="desc">{{ desc }}</textarea></p>
 <p><button type="submit" style="font-size:30px">提交</button></p>
 </form>
-{% if ret %}
-<p>{{ ret }}</p>
-{% endif %}
 {% if prompt %}
 <p>{{ prompt }}</p>
 {% endif %}

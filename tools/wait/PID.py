@@ -34,7 +34,6 @@ def handle(pids, num_resume=1024, handle_zombie=False):
 				_p_status = _proc.status()
 				if _p_status == STATUS_ZOMBIE:
 					_del_l.append((_i, _pid,))
-					_sleep_tag = False
 					if handle_zombie:
 						_parent = _proc.parent()
 						if _parent is not None:
@@ -43,6 +42,7 @@ def handle(pids, num_resume=1024, handle_zombie=False):
 									_parent.resume()
 								except Exception as e:
 									pass
+							_sleep_tag = False
 				elif (_p_status == STATUS_STOPPED) or (_p_status == STATUS_TRACING_STOP):
 					if (_uid == 0) or (_uid in _proc.uids()):
 						if num_resume == 0:
@@ -76,5 +76,4 @@ def handle(pids, num_resume=1024, handle_zombie=False):
 			sleep(1.0)
 
 if __name__ == "__main__":
-
 	handle([int(i) for i in sys.argv[1:]])
