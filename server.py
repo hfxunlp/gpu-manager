@@ -726,7 +726,7 @@ def api_update_form_post():
 		request_form = loads(request.get_data())
 		usr, passwd = request_form["usr"], request_form["passwd"]
 		if manager.login(usr, passwd) and manager.users[usr].is_safe():
-			t = Task(tid=int(request_form["tid"]), cmd=request_form["cmd"], wkd=request_form["wkd"], stdout=request_form["stdout"], stderr=request_form["stderr"], usr="", ngpu=int(request_form["ngpu"]) if request_form["ngpu"] else request_form["ngpu"], gpuids=None, force_gpuids=parse_none(request_form["force_gpuids"], func=int_split), real_gpuid_args=parse_none(request_form["real_gpuid_args"]), timeout=parse_none(request_form["timeout"], func=float), email=request.form["email"], desc=request_form["desc"], pid=None, ctime=None, stime=None, etime=None, status=None)
+			t = Task(tid=int(request_form["tid"]), cmd=request_form["cmd"], wkd=request_form["wkd"], stdout=request_form["stdout"], stderr=request_form["stderr"], usr="", ngpu=int(request_form["ngpu"]) if request_form["ngpu"] else request_form["ngpu"], gpuids=None, force_gpuids=parse_none(request_form["force_gpuids"], func=int_split), real_gpuid_args=parse_none(request_form["real_gpuid_args"]), timeout=parse_none(request_form["timeout"], func=float), email=request_form["email"], desc=request_form["desc"], pid=None, ctime=None, stime=None, etime=None, status=None)
 			if manager.update_task(t, usr):
 				return dumps({"ret": "更新成功,任务ID %d" % (t.tid,)})
 		return api_update_fail_dump
